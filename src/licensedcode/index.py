@@ -19,7 +19,7 @@ from time import time
 
 from intbitset import intbitset
 
-from licensedcode import SMALL_RULE
+from licensedcode import JULIA, SMALL_RULE
 from licensedcode import TINY_RULE
 from licensedcode.legalese import common_license_words
 from licensedcode import match
@@ -139,6 +139,10 @@ class LicenseIndex(object):
 
         'sets_by_rid',
         'msets_by_rid',
+
+        'rules_by_rid_julia',
+        'sets_by_rid_julia',
+        'msets_by_rid_julia',
 
         'rid_by_hash',
         'rules_automaton',
@@ -545,6 +549,13 @@ class LicenseIndex(object):
         self.tokens_by_tid = tokens_by_tid = [
             ts for ts, _tid in sorted(dictionary.items(), key=itemgetter(1))]
         self.len_tokens = len_tokens = len(tokens_by_tid)
+
+        if JULIA:
+            import juliacall
+            self.rules_by_rid_julia = JULIA.convert_rule_list(rules_by_rid)
+            self.sets_by_rid_julia = juliacall.convert(JULIA.Vector, self.sets_by_rid)
+            self.msets_by_rid_julia = juliacall.convert(JULIA.Vector,self.msets_by_rid)
+
 
         # some tokens are made entirely of digits and these can create some
         # worst case behavior when there are long runs on these

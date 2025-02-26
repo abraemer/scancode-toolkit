@@ -14,6 +14,7 @@ from itertools import groupby
 
 from intbitset import intbitset
 
+from licensedcode import JULIA
 from licensedcode.tokenize import ngrams
 
 """
@@ -230,6 +231,8 @@ def build_set_and_mset(token_ids, _use_bigrams=False):
     Return a tuple of (tids set, multiset) given a `token_ids` tids
     sequence.
     """
+    if JULIA:
+        return JULIA.build_set_and_tids_mset(list(token_ids))
     if _use_bigrams:
         return build_set_and_bigrams_mset(token_ids)
     else:
@@ -240,7 +243,14 @@ def build_set_and_mset(token_ids, _use_bigrams=False):
 # all candidates: we compute too many candidates that may waste time in seq
 # matching for no reason.
 
+def compute_candidates_jl(query_run, idx, matchable_rids, top=50,
+                        high_resemblance=False, high_resemblance_threshold=0.8,
+                       _use_bigrams=False):
+    results = JULIA.compute_candidates(query_run.matchable_tokens(), idx.len_legalese, idx.rules_by_rid_julia, idx.sets_by_rid_julia, idx.msets_by_rid_julia, matchable_rids, top, high_resemblance, high_resemblance_threshold)
+    return list(map(lambda x: (x[0],x[1],idx.rules_by_rid[x[1]],x[3]), results))
 
+
+#  def compute_candidates(query_run: QueryRun, idx: LicenseIndex, matchable_rids, top=50,
 def compute_candidates(query_run, idx, matchable_rids, top=50,
                        high_resemblance=False, high_resemblance_threshold=0.8,
                        _use_bigrams=False):
@@ -256,6 +266,10 @@ def compute_candidates(query_run, idx, matchable_rids, top=50,
     if `high_resemblance` is True, this return only candidates that have a a
     high resemblance above `high_resemblance_threshold`.
     """
+    if JULIA:
+        return compute_candidates_jl(query_run, idx, matchable_rids, top=50,
+                            high_resemblance=False, high_resemblance_threshold=0.8,
+                        _use_bigrams=False)
     # collect query-side sets used for matching
     token_ids = query_run.matchable_tokens()
     qset, qmset = build_set_and_mset(token_ids, _use_bigrams=_use_bigrams)
