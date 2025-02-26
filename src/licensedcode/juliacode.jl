@@ -1,3 +1,5 @@
+println("*"^20,"\nHello from Julia!\n","*"^20)
+
 const MSet = Dict{Int,Int}
 
 function build_set_and_tids_mset(token_ids)
@@ -70,6 +72,7 @@ struct RuleInfo
     min_matched_length::Int
     min_high_matched_length_unique::Int
     min_high_matched_length::Int
+    minimum_containment::Float64
 end
     
 function convert_rule_list(rules_by_rid)
@@ -77,7 +80,8 @@ function convert_rule_list(rules_by_rid)
         pyconvert(Any, r.get_min_matched_length(true)),
         pyconvert(Any, r.get_min_matched_length(false)),
         pyconvert(Any, r.get_min_high_matched_length(true)),
-        pyconvert(Any, r.get_min_high_matched_length(false))) for r in rules_by_rid]
+        pyconvert(Any, r.get_min_high_matched_length(false)),
+        pyconvert(Any, r._minimum_containment)) for r in rules_by_rid]
 end
 
 function compute_candidates(token_ids, len_legalese, rules_by_rid, sets_by_rid, msets_by_rid,
@@ -86,12 +90,12 @@ function compute_candidates(token_ids, len_legalese, rules_by_rid, sets_by_rid, 
     qset, qmset = build_set_and_tids_mset(token_ids)
 
     # @info "compute_candidates" typeof(token_ids) typeof(len_legalese) typeof(rules_by_rid) typeof(sets_by_rid) typeof(msets_by_rid) typeof(matchable_rids) typeof(top) typeof(high_resemblance) typeof(high_resemblance_threshold)
-    # typeof(token_ids) = PyIterable{Any}
+    # typeof(token_ids) = Vector{Int64} (alias for Array{Int64, 1})
     # typeof(len_legalese) = Int64
     # typeof(rules_by_rid) = Vector{RuleInfo} (alias for Array{RuleInfo, 1})
     # typeof(sets_by_rid) = Vector{Union{Nothing, BitSet}} (alias for Array{Union{Nothing, BitSet}, 1})
     # typeof(msets_by_rid) = Vector{Union{Nothing, Dict{Int64, Int64}}} (alias for Array{Union{Nothing, Dict{Int64, Int64}}, 1})
-    # typeof(matchable_rids) = PySet{Any}
+    # typeof(matchable_rids) = BitSet
     # typeof(top) = Int64
     # typeof(high_resemblance) = Bool
     # typeof(high_resemblance_threshold) = Float64
@@ -110,7 +114,14 @@ function compute_candidates(token_ids, len_legalese, rules_by_rid, sets_by_rid, 
         rid -= 1 # julia python compat
         rid in matchable_rids || continue
 
-        scores_vectors, high_set_intersection = compare_token_sets(qset, sets_by_rid[rid+1], len_legalese, rule.min_high_matched_length_unique, rule.min_matched_length_unique)
+        scores_vectors, high_set_intersection = compare_token_sets(
+            qset,
+            sets_by_rid[rid+1],
+            len_legalese,
+            rule.min_high_matched_length_unique,
+            rule.min_matched_length_unique; 
+            minimum_containment=rule.minimum_containment,
+            high_resemblance_threshold)
 
         if !isnothing(scores_vectors)
             svr, svf = scores_vectors
@@ -123,7 +134,7 @@ function compute_candidates(token_ids, len_legalese, rules_by_rid, sets_by_rid, 
 
     length(sortable_candidates) == 0 && return sortable_candidates
 
-    sort!(sortable_candidates; rev=true, by=x->x[1])
+    sort!(sortable_candidates; rev=true)
 
     ####################################################################
     # step 2 is on tids multisets
@@ -132,7 +143,14 @@ function compute_candidates(token_ids, len_legalese, rules_by_rid, sets_by_rid, 
     sortable_candidates_new = eltype(sortable_candidates)[]
     for (k , (_score_vectors, rid, rule, high_set_intersection)) in enumerate(sortable_candidates)
         k >= 10*top && break
-        scores_vectors, _intersection = compare_token_sets(qmset, msets_by_rid[rid+1], len_legalese, rule.min_high_matched_length, rule.min_matched_length)
+        scores_vectors, _intersection = compare_token_sets(
+            qmset, 
+            msets_by_rid[rid+1],
+            len_legalese,
+            rule.min_high_matched_length,
+            rule.min_matched_length;
+            minimum_containment=rule.minimum_containment,
+            high_resemblance_threshold)
 
         if !isnothing(scores_vectors)
             svr, svf = scores_vectors

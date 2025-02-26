@@ -13,6 +13,7 @@ from functools import partial
 from itertools import groupby
 
 from intbitset import intbitset
+import juliacall
 
 from licensedcode import JULIA
 from licensedcode.tokenize import ngrams
@@ -232,6 +233,8 @@ def build_set_and_mset(token_ids, _use_bigrams=False):
     sequence.
     """
     if JULIA:
+        if _use_bigrams:
+            raise RuntimeError("build_set_and_mset did not implement _use_bigrams")
         return JULIA.build_set_and_tids_mset(list(token_ids))
     if _use_bigrams:
         return build_set_and_bigrams_mset(token_ids)
@@ -246,7 +249,8 @@ def build_set_and_mset(token_ids, _use_bigrams=False):
 def compute_candidates_jl(query_run, idx, matchable_rids, top=50,
                         high_resemblance=False, high_resemblance_threshold=0.8,
                        _use_bigrams=False):
-    results = JULIA.compute_candidates(query_run.matchable_tokens(), idx.len_legalese, idx.rules_by_rid_julia, idx.sets_by_rid_julia, idx.msets_by_rid_julia, matchable_rids, top, high_resemblance, high_resemblance_threshold)
+    tokens = juliacall.convert(JULIA.Vector[JULIA.Int], list(query_run.matchable_tokens()))
+    results = JULIA.compute_candidates(tokens, idx.len_legalese, idx.rules_by_rid_julia, idx.sets_by_rid_julia, idx.msets_by_rid_julia, matchable_rids, top, high_resemblance, high_resemblance_threshold)
     return list(map(lambda x: (x[0],x[1],idx.rules_by_rid[x[1]],x[3]), results))
 
 
@@ -267,6 +271,8 @@ def compute_candidates(query_run, idx, matchable_rids, top=50,
     high resemblance above `high_resemblance_threshold`.
     """
     if JULIA:
+        if _use_bigrams:
+            raise RuntimeError("compute_candidates did not implement _use_bigrams")
         return compute_candidates_jl(query_run, idx, matchable_rids, top=50,
                             high_resemblance=False, high_resemblance_threshold=0.8,
                         _use_bigrams=False)

@@ -143,6 +143,7 @@ class LicenseIndex(object):
         'rules_by_rid_julia',
         'sets_by_rid_julia',
         'msets_by_rid_julia',
+        'approx_matchable_rids_julia',
 
         'rid_by_hash',
         'rules_automaton',
@@ -555,6 +556,7 @@ class LicenseIndex(object):
             self.rules_by_rid_julia = JULIA.convert_rule_list(rules_by_rid)
             self.sets_by_rid_julia = juliacall.convert(JULIA.Vector, self.sets_by_rid)
             self.msets_by_rid_julia = juliacall.convert(JULIA.Vector,self.msets_by_rid)
+            self.approx_matchable_rids_julia = JULIA.BitSet(self.approx_matchable_rids)
 
 
         # some tokens are made entirely of digits and these can create some
@@ -733,7 +735,7 @@ class LicenseIndex(object):
         multiple local alignments (aka. diff). Return a list of matches.
         """
         matches = []
-        matchable_rids = self.approx_matchable_rids
+        matchable_rids = self.approx_matchable_rids_julia if JULIA else self.approx_matchable_rids
 
         already_matched_qspans = matched_qspans[:]
 

@@ -7,10 +7,11 @@
 # See https://aboutcode.org for more information about nexB OSS projects.
 #
 
-# from juliacall import Main as jl
-# jl.include("src/licensedcode/juliacode.jl")
-# JULIA = jl
-JULIA = False
+JULIA = True
+if JULIA:
+    from juliacall import Main as jl
+    jl.include("src/licensedcode/juliacode.jl")
+    JULIA = jl
 
 
 # FIXME: we should consider the length of two rules and two matches when considering MAX_DIST
