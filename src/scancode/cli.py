@@ -72,6 +72,8 @@ from scancode.interrupt import fake_interruptible
 from scancode.interrupt import interruptible
 from scancode.pool import ScanCodeTimeoutError
 
+import licensedcode
+
 # Tracing flags
 TRACE = False
 TRACE_DEEP = False
@@ -1215,6 +1217,13 @@ def run_scanners(
     return scan_success
 
 
+def initialize_worker():
+    logger_debug(f"initialize_pool. ID: {os.getpid()}")
+    if licensedcode.USE_JULIA:
+        logger_debug("Calling initialize_julia")
+        licensedcode.initialize_julia()
+
+
 def scan_codebase(
     codebase,
     scanners,
@@ -1266,7 +1275,7 @@ def scan_codebase(
     try:
         if processes >= 1:
             # maxtasksperchild helps with recycling processes in case of leaks
-            pool = get_pool(processes=processes, maxtasksperchild=1000)
+            pool = get_pool(processes=processes, maxtasksperchild=1000, initializer=initialize_worker)
             # Using chunksize is documented as much more efficient in the Python
             # doc. Yet "1" still provides a better and more progressive
             # feedback. With imap_unordered, results are returned as soon as

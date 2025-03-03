@@ -84,6 +84,14 @@ function convert_rule_list(rules_by_rid)
         pyconvert(Any, r._minimum_containment)) for r in rules_by_rid]
 end
 
+function convert_set_list(sets)
+    return [isnothing(set) ? nothing : BitSet(set) for set in sets]
+end
+
+function convert_mset_list(msets)
+    return [isnothing(mset) ? nothing : MSet(mset) for mset in msets]
+end 
+
 function compute_candidates(token_ids, len_legalese, rules_by_rid, sets_by_rid, msets_by_rid,
      matchable_rids, top=50, high_resemblance=false, high_resemblance_threshold=0.8)
     # collect query-side sets used for matching

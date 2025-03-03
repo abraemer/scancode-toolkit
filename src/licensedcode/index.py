@@ -19,7 +19,7 @@ from time import time
 
 from intbitset import intbitset
 
-from licensedcode import JULIA, SMALL_RULE
+from licensedcode import SMALL_RULE
 from licensedcode import TINY_RULE
 from licensedcode.legalese import common_license_words
 from licensedcode import match
@@ -140,6 +140,7 @@ class LicenseIndex(object):
         'sets_by_rid',
         'msets_by_rid',
 
+        'julia',
         'rules_by_rid_julia',
         'sets_by_rid_julia',
         'msets_by_rid_julia',
@@ -236,6 +237,7 @@ class LicenseIndex(object):
         # if True the index has been optimized and becomes read only:
         # no new rules can be added
         self.optimized = False
+        self.julia = False
 
         # For info only, set to True when the rules used to build this index are
         # in all languages as opposed to be only in English.
@@ -551,13 +553,6 @@ class LicenseIndex(object):
             ts for ts, _tid in sorted(dictionary.items(), key=itemgetter(1))]
         self.len_tokens = len_tokens = len(tokens_by_tid)
 
-        if JULIA:
-            import juliacall
-            self.rules_by_rid_julia = JULIA.convert_rule_list(rules_by_rid)
-            self.sets_by_rid_julia = juliacall.convert(JULIA.Vector, self.sets_by_rid)
-            self.msets_by_rid_julia = juliacall.convert(JULIA.Vector,self.msets_by_rid)
-            self.approx_matchable_rids_julia = JULIA.BitSet(self.approx_matchable_rids)
-
 
         # some tokens are made entirely of digits and these can create some
         # worst case behavior when there are long runs on these
@@ -597,6 +592,15 @@ class LicenseIndex(object):
             raise DuplicateRuleError(msg)
 
         self.optimized = True
+    
+    def initialize_julia(self, jl):
+        if not self.optimized:
+            raise Exception('Index has not been optimized and Julia cannot be initialized yet.')
+        self.julia = jl
+        self.rules_by_rid_julia = jl.convert_rule_list(self.rules_by_rid)
+        self.sets_by_rid_julia = jl.convert_set_list(self.sets_by_rid)
+        self.msets_by_rid_julia = jl.convert_mset_list(self.msets_by_rid)
+        self.approx_matchable_rids_julia = jl.BitSet(self.approx_matchable_rids)
 
     def debug_matches(
         self,
@@ -735,7 +739,7 @@ class LicenseIndex(object):
         multiple local alignments (aka. diff). Return a list of matches.
         """
         matches = []
-        matchable_rids = self.approx_matchable_rids_julia if JULIA else self.approx_matchable_rids
+        matchable_rids = self.approx_matchable_rids_julia if self.julia else self.approx_matchable_rids
 
         already_matched_qspans = matched_qspans[:]
 

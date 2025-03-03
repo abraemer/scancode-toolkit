@@ -7,10 +7,14 @@
 # See https://aboutcode.org for more information about nexB OSS projects.
 #
 
-JULIA = True
-if JULIA:
+USE_JULIA = True
+JULIA = None
+def initialize_julia():
     from juliacall import Main as jl
     jl.include("src/licensedcode/juliacode.jl")
+    from .cache import get_index
+    get_index().initialize_julia(jl)
+    global JULIA
     JULIA = jl
 
 

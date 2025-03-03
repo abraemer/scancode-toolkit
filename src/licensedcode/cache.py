@@ -13,7 +13,6 @@ from shutil import rmtree
 
 from commoncode.fileutils import create_dir
 
-from licensedcode import JULIA
 from scancode_config import licensedcode_cache_dir
 from scancode_config import scancode_cache_dir
 
@@ -106,7 +105,7 @@ class LicenseCache:
         has_cache = os.path.exists(cache_file) and os.path.getsize(cache_file)
 
         # bypass build if cache exists
-        if not JULIA and has_cache and not force:
+        if has_cache and not force:
             try:
                 # save the list of additional directories included in the cache, or None if the cache does not
                 # include any additional directories
