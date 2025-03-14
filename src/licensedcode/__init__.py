@@ -7,7 +7,7 @@
 # See https://aboutcode.org for more information about nexB OSS projects.
 #
 
-USE_JULIA = True
+USE_JULIA = False
 JULIA = None
 def initialize_julia():
     from juliacall import Main as jl

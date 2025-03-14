@@ -1281,7 +1281,7 @@ def scan_codebase(
             # feedback. With imap_unordered, results are returned as soon as
             # ready and out of order so we never know exactly what is processing
             # until completed.
-            scans = pool.imap_unordered(runner, resources, chunksize=1)
+            scans = pool.imap_unordered(runner, resources, chunksize=1000)
             pool.close()
         else:
             # no multiprocessing with processes=0 or -1
