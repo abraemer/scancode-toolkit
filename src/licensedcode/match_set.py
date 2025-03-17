@@ -88,13 +88,17 @@ TRACE_CANDIDATES_MSET = False
 TRACE_CANDIDATES_FILTER_DUPE = False
 
 
-def logger_debug(*args): pass
+def logger_debug(*args):
+    pass
 
 
-if (TRACE or TRACE_CANDIDATES or
-  TRACE_CANDIDATES_SET or TRACE_CANDIDATES_SET or
-  TRACE_CANDIDATES_FILTER_DUPE):
-
+if (
+    TRACE
+    or TRACE_CANDIDATES
+    or TRACE_CANDIDATES_SET
+    or TRACE_CANDIDATES_SET
+    or TRACE_CANDIDATES_FILTER_DUPE
+):
     import logging
     import sys
 
@@ -103,7 +107,7 @@ if (TRACE or TRACE_CANDIDATES or
     logger.setLevel(logging.DEBUG)
 
     def logger_debug(*args):
-        return logger.debug(' '.join(isinstance(a, str) and a or repr(a) for a in args))
+        return logger.debug(" ".join(isinstance(a, str) and a or repr(a) for a in args))
 
 
 def tids_sets_intersector(qset, iset):
@@ -156,16 +160,18 @@ def high_tids_multiset_subset(mset, len_legalese):
     """
     Return a subset of a multiset with items made only of legalese tokens.
     """
-    return {tid: count for tid, count in mset.items()
-            if tid < len_legalese}
+    return {tid: count for tid, count in mset.items() if tid < len_legalese}
 
 
 def high_bigrams_multiset_subset(mset, len_legalese):
     """
     Return a subset of a multiset with items made only of legalese tokens.
     """
-    return {bigram: count for bigram, count in mset.items()
-            if bigram[0] < len_legalese or bigram[1] < len_legalese}
+    return {
+        bigram: count
+        for bigram, count in mset.items()
+        if bigram[0] < len_legalese or bigram[1] < len_legalese
+    }
 
 
 def high_multiset_subset(mset, len_legalese, _use_bigrams=False):
@@ -231,6 +237,7 @@ def build_set_and_mset(token_ids, _use_bigrams=False):
     sequence.
     """
     from licensedcode import JULIA
+
     if JULIA:
         if _use_bigrams:
             raise RuntimeError("build_set_and_mset did not implement _use_bigrams")
@@ -240,25 +247,52 @@ def build_set_and_mset(token_ids, _use_bigrams=False):
     else:
         return build_set_and_tids_mset(token_ids)
 
+
 # FIXME: we should consider more aggressively the thresholds and what a match
 # filters would discard when we compute candidates to eventually discard many or
 # all candidates: we compute too many candidates that may waste time in seq
 # matching for no reason.
 
-def compute_candidates_jl(query_run, idx, matchable_rids, top=50,
-                        high_resemblance=False, high_resemblance_threshold=0.8,
-                       _use_bigrams=False):
+
+def compute_candidates_jl(
+    query_run,
+    idx,
+    matchable_rids,
+    top=50,
+    high_resemblance=False,
+    high_resemblance_threshold=0.8,
+    _use_bigrams=False,
+):
     import juliacall
     from licensedcode import JULIA
-    tokens = juliacall.convert(JULIA.Vector[JULIA.Int], list(query_run.matchable_tokens()))
-    results = JULIA.compute_candidates(tokens, idx.len_legalese, idx.rules_by_rid_julia, idx.sets_by_rid_julia, idx.msets_by_rid_julia, matchable_rids, top, high_resemblance, high_resemblance_threshold)
-    return list(map(lambda x: (x[0],x[1],idx.rules_by_rid[x[1]],x[3]), results))
+
+    tokens = juliacall.convert(
+        JULIA.Vector[JULIA.Int], list(query_run.matchable_tokens())
+    )
+    results = JULIA.compute_candidates(
+        tokens,
+        idx.len_legalese,
+        idx.rules_by_rid_julia,
+        idx.sets_by_rid_julia,
+        idx.msets_by_rid_julia,
+        matchable_rids,
+        top,
+        high_resemblance,
+        high_resemblance_threshold,
+    )
+    return list(map(lambda x: (x[0], x[1], idx.rules_by_rid[x[1]], x[3]), results))
 
 
 #  def compute_candidates(query_run: QueryRun, idx: LicenseIndex, matchable_rids, top=50,
-def compute_candidates(query_run, idx, matchable_rids, top=50,
-                       high_resemblance=False, high_resemblance_threshold=0.8,
-                       _use_bigrams=False):
+def compute_candidates(
+    query_run,
+    idx,
+    matchable_rids,
+    top=50,
+    high_resemblance=False,
+    high_resemblance_threshold=0.8,
+    _use_bigrams=False,
+):
     """
     Return a ranked list of rule candidates for further matching give a
     `query_run`. Use approximate matching based on token sets ignoring
@@ -271,13 +305,33 @@ def compute_candidates(query_run, idx, matchable_rids, top=50,
     if `high_resemblance` is True, this return only candidates that have a a
     high resemblance above `high_resemblance_threshold`.
     """
-    from licensedcode import JULIA
+    from licensedcode import JULIA, USE_RUST
+
     if JULIA:
         if _use_bigrams:
             raise RuntimeError("compute_candidates did not implement _use_bigrams")
-        return compute_candidates_jl(query_run, idx, matchable_rids, top=50,
-                            high_resemblance=False, high_resemblance_threshold=0.8,
-                        _use_bigrams=False)
+        return compute_candidates_jl(
+            query_run,
+            idx,
+            matchable_rids,
+            top=50,
+            high_resemblance=False,
+            high_resemblance_threshold=0.8,
+            _use_bigrams=False,
+        )
+    if USE_RUST:
+        import candidate_matcher
+
+        return candidate_matcher.compute_candidates(
+            list(query_run.matchable_tokens()),
+            idx.sets_by_rid_rust,
+            idx.msets_by_rid,
+            matchable_rids,
+            top,
+            idx.len_legalese,
+            high_resemblance_threshold,
+            _use_bigrams,
+        )
     # collect query-side sets used for matching
     token_ids = query_run.matchable_tokens()
     qset, qmset = build_set_and_mset(token_ids, _use_bigrams=_use_bigrams)
@@ -310,13 +364,19 @@ def compute_candidates(query_run, idx, matchable_rids, top=50,
             unique=True,
             rule=rule,
             filter_non_matching=True,
-            high_resemblance_threshold=high_resemblance_threshold)
+            high_resemblance_threshold=high_resemblance_threshold,
+        )
 
         if scores_vectors:
             svr, svf = scores_vectors
-            if (not high_resemblance
-            or (high_resemblance and svr.is_highly_resemblant and svf.is_highly_resemblant)):
-                sortable_candidates_append((scores_vectors, rid, rule, high_set_intersection))
+            if not high_resemblance or (
+                high_resemblance
+                and svr.is_highly_resemblant
+                and svf.is_highly_resemblant
+            ):
+                sortable_candidates_append(
+                    (scores_vectors, rid, rule, high_set_intersection)
+                )
 
     if not sortable_candidates:
         return sortable_candidates
@@ -324,7 +384,10 @@ def compute_candidates(query_run, idx, matchable_rids, top=50,
     sortable_candidates.sort(reverse=True)
 
     if TRACE_CANDIDATES_SET:
-        logger_debug('\n\n\ncompute_candidates: sets: sortable_candidates:', len(sortable_candidates))
+        logger_debug(
+            "\n\n\ncompute_candidates: sets: sortable_candidates:",
+            len(sortable_candidates),
+        )
         print()
         for rank, x in enumerate(sortable_candidates[:20], 1):
             print(rank, x)
@@ -334,7 +397,7 @@ def compute_candidates(query_run, idx, matchable_rids, top=50,
     # step 2 is on tids multisets
     ####################################################################
     # keep only the 10 x top candidates
-    candidates = sortable_candidates[:top * 10]
+    candidates = sortable_candidates[: top * 10]
     sortable_candidates = []
     sortable_candidates_append = sortable_candidates.append
 
@@ -348,7 +411,6 @@ def compute_candidates(query_run, idx, matchable_rids, top=50,
     high_intersection_filter = partial(high_multiset_subset, _use_bigrams=_use_bigrams)
 
     for _score_vectors, rid, rule, high_set_intersection in candidates:
-
         scores_vectors, _intersection = compare_token_sets(
             qset=qmset,
             iset=msets_by_rid[rid],
@@ -359,15 +421,21 @@ def compute_candidates(query_run, idx, matchable_rids, top=50,
             unique=False,
             rule=rule,
             filter_non_matching=filter_non_matching,
-            high_resemblance_threshold=high_resemblance_threshold)
+            high_resemblance_threshold=high_resemblance_threshold,
+        )
 
         if scores_vectors:
             svr, svf = scores_vectors
-            if (not high_resemblance
-            or (high_resemblance and svr.is_highly_resemblant and svf.is_highly_resemblant)):
+            if not high_resemblance or (
+                high_resemblance
+                and svr.is_highly_resemblant
+                and svf.is_highly_resemblant
+            ):
                 # note: we keep the high_set_intersection of sets from step1,
                 # not multisets from this step2
-                sortable_candidates_append((scores_vectors, rid, rule, high_set_intersection))
+                sortable_candidates_append(
+                    (scores_vectors, rid, rule, high_set_intersection)
+                )
 
     if not sortable_candidates:
         return sortable_candidates
@@ -376,25 +444,48 @@ def compute_candidates(query_run, idx, matchable_rids, top=50,
     candidates = sorted(filter_dupes(sortable_candidates), reverse=True)[:top]
 
     if TRACE_CANDIDATES_MSET and candidates:
-        logger_debug('\n\n\ncompute_candidates: FINAL: sortable_candidates:', len(candidates))
+        logger_debug(
+            "\n\n\ncompute_candidates: FINAL: sortable_candidates:", len(candidates)
+        )
         # CSV-like printout
-        print(','.join(
-            ['rank', 'rule'] +
-            [x + '_rounded' for x in ScoresVector._fields] +
-            list(ScoresVector._fields)))
+        print(
+            ",".join(
+                ["rank", "rule"]
+                + [x + "_rounded" for x in ScoresVector._fields]
+                + list(ScoresVector._fields)
+            )
+        )
 
-        for rank, ((score_vec1, score_vec2), rid, rule, high_set_intersection) in enumerate(candidates, 1):
-            print(','.join(str(x) for x in ([rank, rule.identifier] + list(score_vec1) + list(score_vec2))))
+        for rank, (
+            (score_vec1, score_vec2),
+            rid,
+            rule,
+            high_set_intersection,
+        ) in enumerate(candidates, 1):
+            print(
+                ",".join(
+                    str(x)
+                    for x in (
+                        [rank, rule.identifier] + list(score_vec1) + list(score_vec2)
+                    )
+                )
+            )
 
     return candidates[:top]
 
 
-def compare_token_sets(qset, iset,
-        intersector, counter, high_intersection_filter,
-        len_legalese, unique,
-        rule,
-        filter_non_matching=True,
-        high_resemblance_threshold=0.8):
+def compare_token_sets(
+    qset,
+    iset,
+    intersector,
+    counter,
+    high_intersection_filter,
+    len_legalese,
+    unique,
+    rule,
+    filter_non_matching=True,
+    high_resemblance_threshold=0.8,
+):
     """
     Compare a `qset` query set or multiset with a `iset` index rule set or
     multiset. Return a tuple of (ScoresVector tuple, intersection) from
@@ -446,12 +537,16 @@ def compare_token_sets(qset, iset,
     # capturing that resemblance matters when high (e.g. the sets are highly
     # similar) and that otherwise containment matters most. This is could be
     # seen as a form of "smoothing"
-    amplified_resemblance = resemblance ** 2
+    amplified_resemblance = resemblance**2
 
     minimum_containment = rule._minimum_containment
 
     # FIXME: we should not recompute this /100 ... it should be cached in the index
-    if filter_non_matching and minimum_containment and containment < minimum_containment:
+    if (
+        filter_non_matching
+        and minimum_containment
+        and containment < minimum_containment
+    ):
         return None, None
 
     scores = (
@@ -466,18 +561,19 @@ def compare_token_sets(qset, iset,
             containment=containment,
             resemblance=amplified_resemblance,
             matched_length=matched_length,
-        )
+        ),
     )
     return scores, high_intersection
 
 
 _scores_vector_fields = [
-    'is_highly_resemblant',
-    'containment',
-    'resemblance',
-    'matched_length']
+    "is_highly_resemblant",
+    "containment",
+    "resemblance",
+    "matched_length",
+]
 
-ScoresVector = namedtuple('ScoresVector', _scores_vector_fields)
+ScoresVector = namedtuple("ScoresVector", _scores_vector_fields)
 
 
 def filter_dupes(sortable_candidates):
@@ -508,12 +604,14 @@ def filter_dupes(sortable_candidates):
 
         if TRACE_CANDIDATES_FILTER_DUPE:
             print()
-            logger_debug('compute_candidates: ', 'duplicates:', len(duplicates), repr(group))
+            logger_debug(
+                "compute_candidates: ", "duplicates:", len(duplicates), repr(group)
+            )
             for dupe in duplicates:
                 print(dupe)
 
             print()
-            print('Keeping only:', duplicates[0])
+            print("Keeping only:", duplicates[0])
             print()
             print()
 

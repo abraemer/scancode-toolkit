@@ -17,6 +17,10 @@ def initialize_julia():
     global JULIA
     JULIA = jl
 
+USE_RUST = True
+def initialize_rust():
+    from .cache import get_index
+    get_index().initialize_rust()
 
 # FIXME: we should consider the length of two rules and two matches when considering MAX_DIST
 # eventually this should be skipped early right during the matching too

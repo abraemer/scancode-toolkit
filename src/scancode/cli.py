@@ -1222,6 +1222,9 @@ def initialize_worker():
     if licensedcode.USE_JULIA:
         logger_debug("Calling initialize_julia")
         licensedcode.initialize_julia()
+    if licensedcode.USE_RUST:
+        logger_debug("Calling initialize_rust")
+        licensedcode.initialize_rust()
 
 
 def scan_codebase(
@@ -1275,16 +1278,17 @@ def scan_codebase(
     try:
         if processes >= 1:
             # maxtasksperchild helps with recycling processes in case of leaks
-            pool = get_pool(processes=processes, maxtasksperchild=1000, initializer=initialize_worker)
+            pool = get_pool(processes=processes, initializer=initialize_worker)
             # Using chunksize is documented as much more efficient in the Python
             # doc. Yet "1" still provides a better and more progressive
             # feedback. With imap_unordered, results are returned as soon as
             # ready and out of order so we never know exactly what is processing
             # until completed.
-            scans = pool.imap_unordered(runner, resources, chunksize=1000)
+            scans = pool.imap_unordered(runner, resources)
             pool.close()
         else:
             # no multiprocessing with processes=0 or -1
+            initialize_worker()
             scans = map(runner, resources)
 
         if progress_manager:

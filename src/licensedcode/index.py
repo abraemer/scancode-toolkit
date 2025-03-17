@@ -146,6 +146,8 @@ class LicenseIndex(object):
         'msets_by_rid_julia',
         'approx_matchable_rids_julia',
 
+        'sets_by_rid_rust',
+
         'rid_by_hash',
         'rules_automaton',
         'fragments_automaton',
@@ -601,6 +603,14 @@ class LicenseIndex(object):
         self.sets_by_rid_julia = jl.convert_set_list(self.sets_by_rid)
         self.msets_by_rid_julia = jl.convert_mset_list(self.msets_by_rid)
         self.approx_matchable_rids_julia = jl.BitSet(self.approx_matchable_rids)
+    
+    def initialize_rust(self):
+        if not self.optimized:
+            raise Exception('Index has not been optimized and Rust cannot be initialized yet.')
+        self.sets_by_rid_rust = [set(s) if s else None for s in self.sets_by_rid]
+        # self.rules_by_rid_julia = jl.convert_rule_list(self.rules_by_rid)
+        # self.msets_by_rid_julia = jl.convert_mset_list(self.msets_by_rid)
+        # self.approx_matchable_rids_julia = jl.BitSet(self.approx_matchable_rids)
 
     def debug_matches(
         self,
