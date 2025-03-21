@@ -236,12 +236,6 @@ def build_set_and_mset(token_ids, _use_bigrams=False):
     Return a tuple of (tids set, multiset) given a `token_ids` tids
     sequence.
     """
-    from licensedcode import JULIA
-
-    if JULIA:
-        if _use_bigrams:
-            raise RuntimeError("build_set_and_mset did not implement _use_bigrams")
-        return JULIA.build_set_and_tids_mset(list(token_ids))
     if _use_bigrams:
         return build_set_and_bigrams_mset(token_ids)
     else:
@@ -314,23 +308,23 @@ def compute_candidates(
             query_run,
             idx,
             matchable_rids,
-            top=50,
-            high_resemblance=False,
-            high_resemblance_threshold=0.8,
-            _use_bigrams=False,
+            top=top,
+            high_resemblance=high_resemblance,
+            high_resemblance_threshold=high_resemblance_threshold,
+            _use_bigrams=_use_bigrams,
         )
     if USE_RUST:
         import candidate_matcher
 
         return candidate_matcher.compute_candidates(
             list(query_run.matchable_tokens()),
-            idx.sets_by_rid_rust,
-            idx.msets_by_rid,
-            matchable_rids,
+            # idx.sets_by_rid_rust,
+            # idx.msets_by_rid,
+            # matchable_rids,
             top,
             idx.len_legalese,
             high_resemblance_threshold,
-            _use_bigrams,
+            # _use_bigrams,
         )
     # collect query-side sets used for matching
     token_ids = query_run.matchable_tokens()

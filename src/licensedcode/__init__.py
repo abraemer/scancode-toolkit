@@ -10,6 +10,7 @@
 USE_JULIA = False
 JULIA = None
 def initialize_julia():
+    print("*"*10, "JULIA INIT", "*"*10, flush=True)
     from juliacall import Main as jl
     jl.include("src/licensedcode/juliacode.jl")
     from .cache import get_index
@@ -19,6 +20,7 @@ def initialize_julia():
 
 USE_RUST = True
 def initialize_rust():
+    print("*"*10, "RUST INIT", "*"*10, flush=True)
     from .cache import get_index
     get_index().initialize_rust()
 

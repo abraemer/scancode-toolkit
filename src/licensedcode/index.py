@@ -600,13 +600,22 @@ class LicenseIndex(object):
             raise Exception('Index has not been optimized and Julia cannot be initialized yet.')
         self.julia = jl
         self.rules_by_rid_julia = jl.convert_rule_list(self.rules_by_rid)
-        self.sets_by_rid_julia = jl.convert_set_list(self.sets_by_rid)
+        self.sets_by_rid_julia = jl.convert_set_list([set(s) if s else None for s in self.sets_by_rid])
         self.msets_by_rid_julia = jl.convert_mset_list(self.msets_by_rid)
         self.approx_matchable_rids_julia = jl.BitSet(self.approx_matchable_rids)
     
     def initialize_rust(self):
         if not self.optimized:
             raise Exception('Index has not been optimized and Rust cannot be initialized yet.')
+        import candidate_matcher
+        candidate_matcher.init_globals(
+            self.rules_by_rid, # vec[RuleInfo]
+            [set(s) if s else None for s in self.sets_by_rid], # vec[Option(HashSet)]
+            self.msets_by_rid, # vec[Option(HashMap)]
+            self.approx_matchable_rids, # HashSet
+        )
+        # self.sets_by_rid_rust = candidate_matcher.convert_set_list(self.sets_by_rid)
+
         self.sets_by_rid_rust = [set(s) if s else None for s in self.sets_by_rid]
         # self.rules_by_rid_julia = jl.convert_rule_list(self.rules_by_rid)
         # self.msets_by_rid_julia = jl.convert_mset_list(self.msets_by_rid)
